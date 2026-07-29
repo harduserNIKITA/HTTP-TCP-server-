@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.10)
+
+project(httpServer CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(СMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_executable(server
+	main.cpp
+	http_request.cpp
+)

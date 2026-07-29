@@ -1,3 +1,4 @@
+#include "http_request.h"
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -37,28 +38,49 @@ int main(){
 
 	std::cout << "Server is listening\n";
 
-	sockaddr_in client{};
-	socklen_t len = sizeof(client);
-	int client_fd = accept(server_fd, (struct sockaddr*)& client, &len);
-	if (client_fd < 0){
-		std::cerr << "Not connect with client\n";
-		close(server_fd);
-		return 1;
-	}
+	while (true){
+		sockaddr_in client{};
+        	socklen_t len = sizeof(client);
+        	int client_fd = accept(server_fd, (struct sockaddr*)& client, &len);
+        	if (client_fd < 0){
+			std::cerr << "Error of connection client\n";
+                	continue;
+        	}
 
-	std::cout << "Client connecting\n";
+        	std::cout << "Client connecting\n";
 
-	char buffer[1024] = {0};
-	ssize_t read_bytes = read(client_fd, buffer, sizeof(buffer) - 1);
-	if (read_bytes > 0){
-		std::cout << "Data from client:\n";
-		std::cout << "--------------------\n";
-		std::cout << buffer << "\n";
-		std::cout << "--------------------\n";
+		char buffer[2048] = {0};
+        	ssize_t read_bytes = read(client_fd, buffer, sizeof(buffer) - 1);
+        	if (read_bytes > 0){
+                	std::string rawRequest(buffer, read_bytes);
+			HttpRequest req = parseHttpRequest(rawRequest);
+
+			std::cout << "method = " << req.method << " | path = " << req.path
+			<< " | version = " << req.version << "\n";
+
+			std::string startLine;
+			std::string body;
+			if (req.path == "/"){
+				startLine = "HTTP/1.1 200 OK";
+				body = "<html><body><h1>Welcome to KOVSHIKOV HTTP-server!!!</h1><p>Main page</p></body></html>";
+			}
+			else if (req.path == "/about"){
+				startLine = "HTTP/1.1 200 OK";
+				body = "<html><body><h1>Page About Us</h1><p>Written on C++ within system call && epoll</p></body></html>";
+			}
+			else {
+				startLine = "HTTP/1.1 404 Not Found";
+				body = "<html><body><h1>Page Not Fout 404</h1></body></html>";
+			}
+
+			std::string httpResponse = startLine + "\r\n" + "Content-Type: text/html; charset=UTF-8\r\n" + "Content-Length: " +
+			std::to_string(body.size()) + "\r\n" + "Connection: close\r\n\r\n" + body;
+			write(client_fd, httpResponse.c_str(), httpResponse.size());
+        	}
+		close(client_fd);
 	}
 
 	close(server_fd);
-	close(client_fd);
 	std::cout << "Server has shut down\n";
 	return 0;
 }
