@@ -1,8 +1,25 @@
-#include "http_request.h"
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <cerrno>
+#include <thread>
+#include <chrono>
+#include "http_request.h"
+
+bool setNonblocking(int fd){
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (flags == -1){
+		perror("Error with F_GETFL");
+		return false;
+	}
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1){
+		perror("Error with F_GETFL");
+		return false;
+	}
+	return true;
+}
 
 int main(){
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -38,20 +55,51 @@ int main(){
 
 	std::cout << "Server is listening\n";
 
+	if (!setNonblocking(server_fd)){
+		std::cerr << "Server_fd FAILED to set NONBLOCK\n";
+		close(server_fd);
+		return 1;
+	}
+
 	while (true){
 		sockaddr_in client{};
         	socklen_t len = sizeof(client);
         	int client_fd = accept(server_fd, (struct sockaddr*)& client, &len);
-        	if (client_fd < 0){
-			std::cerr << "Error of connection client\n";
-                	continue;
-        	}
+		if (client_fd < 0){
+			if (errno == EAGAIN || errno == EWOULDBLOCK){
+				std::cout << "Hasn't new connection... Please wait...\n";
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				continue;
+			}
+			else {
+				perror("Error connection with client");
+				break;
+			}
+		}
 
         	std::cout << "Client connecting\n";
 
-		char buffer[2048] = {0};
+		if (!setNonblocking(client_fd)){
+			std::cerr << "Client_fd FAILED to set NONBLOCK\n";
+			close(client_fd);
+			continue;
+		}
+
+		char buffer[1024] = {0};
         	ssize_t read_bytes = read(client_fd, buffer, sizeof(buffer) - 1);
-        	if (read_bytes > 0){
+		if (read_bytes < 0){
+			if (errno == EAGAIN || errno == EWOULDBLOCK){
+				std::cout << "No data available right now\n";
+			}
+			else {
+				perror("Error read");
+				continue;
+			}
+		}
+		else if (read_bytes == 0){
+			std::cout << "Client disconnecting before sending data\n";
+		}
+        	else{
                 	std::string rawRequest(buffer, read_bytes);
 			HttpRequest req = parseHttpRequest(rawRequest);
 
