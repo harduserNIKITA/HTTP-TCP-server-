@@ -91,20 +91,20 @@ int main(){
 			int current_fd = events[i].data.fd;
 			if (current_fd == server_fd){
 				sockaddr_in client{};
-                		socklen_t len = sizeof(client);
-                		int client_fd = accept(server_fd, (struct sockaddr*)& client, &len);
-                		if (client_fd < 0){
+                socklen_t len = sizeof(client);
+                int client_fd = accept(server_fd, (struct sockaddr*)& client, &len);
+                if (client_fd < 0){
 					if (errno != EAGAIN && errno != EWOULDBLOCK){
 						std::cerr << "error of client connection" << std::system_error(errno, std::generic_category()).what() << '\n';
 					}
 					continue;
-                        	}
+                }
 
-                		if (!setNonblocking(client_fd)){
-                        		std::cerr << "Client_fd FAILED to set NONBLOCK\n";
-                        		close(client_fd);
-                        		continue;
-                		}
+                if (!setNonblocking(client_fd)){
+                    std::cerr << "Client_fd FAILED to set NONBLOCK\n";
+                    close(client_fd);
+                    continue;
+                }
 
 				epoll_event client_ev{};
 				client_ev.events = EPOLLIN;
@@ -119,42 +119,41 @@ int main(){
 			}
 			else {
 				char buffer[1024] = {0};
-                		ssize_t read_bytes = read(current_fd, buffer, sizeof(buffer) - 1);
-                		if (read_bytes < 0){
-                        		if (errno != EAGAIN && errno == EWOULDBLOCK){
-                                		std::cerr << "error read data" << std::system_error(errno, std::generic_category()).what() << '\n';
+                ssize_t read_bytes = read(current_fd, buffer, sizeof(buffer) - 1);
+                if (read_bytes < 0){
+                    if (errno != EAGAIN && errno == EWOULDBLOCK){
+                        std::cerr << "error read data" << std::system_error(errno, std::generic_category()).what() << '\n';
 						close(current_fd);
-                        		}
-                		}
-                		else if (read_bytes == 0){
-                        		std::cout << "[-] client disconnecting before sending data, client_fd: " << current_fd << '\n';
+                    }
+                }
+                else if (read_bytes == 0){
+                    std::cout << "[-] client disconnecting before sending data, client_fd: " << current_fd << '\n';
 					close(current_fd);
-                		}
-                		else {
-                        		std::string rawRequest(buffer, read_bytes);
-                        		HttpRequest req = parseHttpRequest(rawRequest);
+                }
+                else {
+                    std::string rawRequest(buffer, read_bytes);
+                    HttpRequest req = parseHttpRequest(rawRequest);
 
-                        		std::cout << "method = " << req.method << " | path = " << req.path
-                        		<< " | version = " << req.version << "\n";
+                    std::cout << "method = " << req.method << " | path = " << req.path << " | version = " << req.version << "\n";
 
-                        		std::string startLine;
-                        		std::string body;
-                        		if (req.path == "/"){
-                                		startLine = "HTTP/1.1 200 OK";
-                                		body = "<html><body><h1>Welcome to KOVSHIKOV HTTP-server!!!</h1><p>Main page</p></body></html>";
-                        		}
-                        		else if (req.path == "/about"){
-                                		startLine = "HTTP/1.1 200 OK";
-                                		body = "<html><body><h1>Page About Us</h1><p>Written on C++ within system call && epoll</p></body></html>";
-                        		}
+                    std::string startLine;
+                    std::string body;
+                    if (req.path == "/"){
+                        startLine = "HTTP/1.1 200 OK";
+                        body = "<html><body><h1>Welcome to KOVSHIKOV HTTP-server!!!</h1><p>Main page</p></body></html>";
+                    }
+                    else if (req.path == "/about"){
+                        startLine = "HTTP/1.1 200 OK";
+                        body = "<html><body><h1>Page About Us</h1><p>Written on C++ within system call && epoll</p></body></html>";
+                    }
 					else {
-                                		startLine = "HTTP/1.1 404 Not Found";
-                                		body = "<html><body><h1>Page Not Fout 404</h1></body></html>";
-                        		}
+                        startLine = "HTTP/1.1 404 Not Found";
+                        body = "<html><body><h1>Page Not Fout 404</h1></body></html>";
+                    }
 
-                        		std::string httpResponse = startLine + "\r\n" + "Content-Type: text/html; charset=UTF-8\r\n" + "Content-Length: " +
-                        		std::to_string(body.size()) + "\r\n" + "Connection: close\r\n\r\n" + body;
-                        		write(current_fd, httpResponse.c_str(), httpResponse.size());
+                    std::string httpResponse = startLine + "\r\n" + "Content-Type: text/html; charset=UTF-8\r\n" + "Content-Length: " +
+                    std::to_string(body.size()) + "\r\n" + "Connection: close\r\n\r\n" + body;
+                    write(current_fd, httpResponse.c_str(), httpResponse.size());
 
 					close(current_fd);
 					std::cout << "[-] response and close client_fd: " << current_fd << '\n';

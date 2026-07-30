@@ -28,10 +28,10 @@ HttpRequest parseHttpRequest(const std::string& rawRequest){
 			std::string key = header.substr(0, delimeterPos);
 			std::string value = header.substr(delimeterPos + 1);
 			size_t start = value.find_first_not_of(" \t");
-                	if (start != std::string::npos){
-                        	value = value.substr(start);
-                	}
-                	req.headers[key] = value;
+            if (start != std::string::npos){
+                value = value.substr(start);
+            }
+            req.headers[key] = value;
 		}
 	}
 
