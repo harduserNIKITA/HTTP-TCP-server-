@@ -12,6 +12,10 @@
 
 constexpr int MAX_EVENTS = 64;
 
+void printLog(const std::string& log){
+    std::cerr << log << std::system_error(errno, std::generic_category()).what() << '\n';
+}
+
 bool setNonblocking(int fd){
 	int flags = fcntl(fd, F_GETFL, 0);
 	if (flags == -1){
@@ -68,12 +72,12 @@ int main(){
 		return 1;
 	}
 
-	epoll_event ev{};
-	ev.events = EPOLLIN;
-	ev.data.fd = server_fd;
-	if (epoll_ctl(epfd, EPOLL_CTL_ADD, server_fd, &ev) < 0){
-		std::cerr << "error add server_fd in EPOLL: " << std::system_error(errno, std::generic_category()).what() << '\n';
-		close(epfd);
+	epoll_event server_ev{};
+	server_ev.events = EPOLLIN | EPOLLET;
+	server_ev.data.fd = server_fd;
+	if (epoll_ctl(epfd, EPOLL_CTL_ADD, server_fd, &server_ev) < 0){
+	    printLog("error add server_fd to EPOLL");
+    	close(epfd);
 		close(server_fd);
 		return 1;
 	}
@@ -84,55 +88,73 @@ int main(){
 	while (true){
 		int nefd = epoll_wait(epfd, events, MAX_EVENTS, -1);
 		if (nefd < 0){
-			std::cerr << "error in epoll_wait" << std::system_error(errno, std::generic_category()).what() << '\n';
+            if (errno == EINTR) continue;
+            printLog("error in epoll_wait");
 			break;
 		}
 		for (size_t i = 0; i < nefd; i++){
 			int current_fd = events[i].data.fd;
 			if (current_fd == server_fd){
-				sockaddr_in client{};
-                socklen_t len = sizeof(client);
-                int client_fd = accept(server_fd, (struct sockaddr*)& client, &len);
-                if (client_fd < 0){
-					if (errno != EAGAIN && errno != EWOULDBLOCK){
-						std::cerr << "error of client connection" << std::system_error(errno, std::generic_category()).what() << '\n';
-					}
-					continue;
-                }
+                while (true){
+                    sockaddr_in client{};
+                    socklen_t len = sizeof(client);
+                    int client_fd = accept(server_fd, (struct sockaddr*)& client, &len);
+                    if (client_fd < 0){
+                        if (errno == EAGAIN || errno == EWOULDBLOCK){
+                            break;
+                        }
+                        printLog("error of client connection");
+                        continue;
+                    }
 
-                if (!setNonblocking(client_fd)){
-                    std::cerr << "Client_fd FAILED to set NONBLOCK\n";
-                    close(client_fd);
-                    continue;
-                }
+                    if (!setNonblocking(client_fd)){
+                        std::cerr << "Client_fd FAILED to set NONBLOCK\n";
+                        close(client_fd);
+                        continue;
+                    }
 
-				epoll_event client_ev{};
-				client_ev.events = EPOLLIN;
-				client_ev.data.fd = client_fd;
-				if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0){
-					std::cerr << "error in add client_fd to EPOLL" << std::system_error(errno, std::generic_category()).what() << '\n';
-					close(client_fd);
-				}
-				else {
-					std::cout << "[+] new connection\n";
-				}
-			}
-			else {
-				char buffer[1024] = {0};
-                ssize_t read_bytes = read(current_fd, buffer, sizeof(buffer) - 1);
-                if (read_bytes < 0){
-                    if (errno != EAGAIN && errno == EWOULDBLOCK){
-                        std::cerr << "error read data" << std::system_error(errno, std::generic_category()).what() << '\n';
-						close(current_fd);
+                    epoll_event client_ev{};
+                    client_ev.events = EPOLLIN | EPOLLET;
+                    client_ev.data.fd = client_fd;
+                    if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0){
+                        printLog("error in add client_fd to EPOLL");
+                        close(client_fd);
+                    }
+                    else {
+                        std::cout << "[+] new connection\n";
                     }
                 }
-                else if (read_bytes == 0){
-                    std::cout << "[-] client disconnecting before sending data, client_fd: " << current_fd << '\n';
-					close(current_fd);
-                }
-                else {
-                    std::string rawRequest(buffer, read_bytes);
-                    HttpRequest req = parseHttpRequest(rawRequest);
+			}
+			else {
+                std::string fullRawRequest;
+				char buffer[256] = {0};
+                bool client_closed = false;
+                while (true){
+                    ssize_t read_bytes = read(current_fd, buffer, sizeof(buffer) - 1);
+                    if (read_bytes > 0){
+                        fullRawRequest.append(buffer, read_bytes);
+                    }
+                    else if (read_bytes == 0){
+                        std::cout << "[-] client disconnecting before sending data, client_fd: " << current_fd << '\n';
+                        close(current_fd);
+                        client_closed = true;
+                        break;
+                    }
+                    else {
+                        if (errno == EAGAIN || errno == EWOULDBLOCK){
+                            break;
+                        }
+                        printLog("error read data");
+                        close(current_fd);
+                        client_closed = true;
+                        break;
+                    }
+
+                    if (client_closed || fullRawRequest.empty()){
+                        continue;
+                    }
+
+                    HttpRequest req = parseHttpRequest(fullRawRequest);
 
                     std::cout << "method = " << req.method << " | path = " << req.path << " | version = " << req.version << "\n";
 
@@ -146,7 +168,7 @@ int main(){
                         startLine = "HTTP/1.1 200 OK";
                         body = "<html><body><h1>Page About Us</h1><p>Written on C++ within system call && epoll</p></body></html>";
                     }
-					else {
+                    else {
                         startLine = "HTTP/1.1 404 Not Found";
                         body = "<html><body><h1>Page Not Fout 404</h1></body></html>";
                     }
@@ -155,9 +177,9 @@ int main(){
                     std::to_string(body.size()) + "\r\n" + "Connection: close\r\n\r\n" + body;
                     write(current_fd, httpResponse.c_str(), httpResponse.size());
 
-					close(current_fd);
-					std::cout << "[-] response and close client_fd: " << current_fd << '\n';
-				}
+                    close(current_fd);
+                    std::cout << "[-] response and close client_fd: " << current_fd << '\n';
+                }
 			}
 		}
 	}
