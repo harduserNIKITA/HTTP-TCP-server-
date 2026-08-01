@@ -12,7 +12,7 @@ public:
     explicit ThreadPool(int cntThread = std::thread::hardware_concurrency());
 
     ThreadPool(const ThreadPool& other) = delete;
-    ThreadPool& operator()(const ThreadPool& other) = delete;
+    ThreadPool& operator=(const ThreadPool& other) = delete;
 
     ~ThreadPool();
 

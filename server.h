@@ -1,12 +1,32 @@
 #pragma once
+
 #include <string>
+#include "thread_pool.h"
 
-void printLog(const std::string& log);
-bool setNonblocking(int fd);
+class Server{
+public:
+    explicit Server(int port, int cntThreads = std::thread::hardware_concurrency());
 
-int initServer(int port);
+    void run();
 
-void sendHttpResponse(const std::string& rawRequest, int client_fd);
+    ~Server();
 
-void processNewConnections(int server_fd, int epfd);
-void processNewData(int client_fd);
+    Server(const Server&) = delete;
+    Server& operator=(const Server&) = delete;
+
+private:
+    int server_fd{-1};
+    int epfd{-1};
+    int port;
+    ThreadPool pool;
+
+    void printLog(const std::string& log);
+    bool setNonblocking(int fd);
+    void initServer();
+
+    bool sendHttpResponse(const std::string& rawRequest, int client_fd);
+
+    void reactivateSocket(int client_fd);
+    void processNewConnections();
+    void processNewData(int client_fd);
+};

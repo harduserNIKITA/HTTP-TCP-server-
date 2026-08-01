@@ -7,17 +7,19 @@ ThreadPool::ThreadPool(int cntThread) : stop(false){
 
     for (int i = 0; i < cntThread; i++){
         workers.emplace_back([this]{
-            std::function<void()> task;
-            {
-                std::unique_lock<std::mutex> lock(this->queueMutex);
-                this->cv.wait(lock, [this]{return this->stop || !this->tasks.empty();});
-                if (this->stop && this->tasks.empty()){
-                    return;
+            while (true){
+                std::function<void()> task;
+                {
+                    std::unique_lock<std::mutex> lock(this->queueMutex);
+                    this->cv.wait(lock, [this]{return this->stop || !this->tasks.empty();});
+                    if (this->stop && this->tasks.empty()){
+                        return;
+                    }
+                    task = std::move(tasks.front());
+                    tasks.pop();
                 }
-                task = std::move(tasks.front());
-                tasks.pop();
+                task();
             }
-            task();
         });
     }
 }
