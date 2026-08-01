@@ -74,7 +74,7 @@ void processNewConnections(int server_fd, int epfd){
                 break;
             }
             printLog("error of client connection");
-            continue;
+            break;
         }
 
         if (!setNonblocking(client_fd)){
@@ -139,6 +139,7 @@ void processNewData(int client_fd){
             if (errno == EAGAIN || errno == EWOULDBLOCK){
                 break;
             }
+            if (errno == EINTR) continue;
             printLog("error read data");
             close(client_fd);
             client_closed = true;
