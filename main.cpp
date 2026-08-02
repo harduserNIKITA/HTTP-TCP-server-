@@ -1,7 +1,19 @@
 #include <iostream>
+#include <atomic>
+#include <csignal>
 #include "server.h"
 
+std::atomic<bool> g_stop_server{false};
+
+void signalHandler(int signal){
+    if (signal == SIGINT || signal == SIGTERM){
+        g_stop_server = true;
+    }
+}
+
 int main(){
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
     try {
         Server server(8080);
         server.run();

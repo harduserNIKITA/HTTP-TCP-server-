@@ -93,10 +93,10 @@ void Server::reactivateSocket(int client_fd){
 
 void Server::run(){
     epoll_event events[MAX_EVENTS] = {0};
-    while (true){
-        int nefd = epoll_wait(epfd, events, MAX_EVENTS, -1);
-        if (nefd < 0){
-            if (errno == EINTR) continue;
+    while (!g_stop_server){
+        int nefd = epoll_wait(epfd, events, MAX_EVENTS, 1000);
+        if (nefd <= 0){
+            if (nefd == 0 || errno == EINTR) continue;
             printLog("error in epoll_wait");
             break;
         }
@@ -176,17 +176,19 @@ void Server::processNewData(int client_fd){
 
     if (fullRawRequest.empty()){
         reactivateSocket(client_fd);
+        std::cout << "[!] reactivate client_fd: " << client_fd << '\n';
         return;
     }
 
     bool shouldClose = sendHttpResponse(fullRawRequest, client_fd);
     if (shouldClose){
         close(client_fd);
+        std::cout << "[-] response and close client_fd: " << client_fd << '\n';
     }
     else {
         reactivateSocket(client_fd);
+        std::cout << "[!] response and reactivate client_fd: " << client_fd << '\n';
     }
-    std::cout << "[-] response and close client_fd: " << client_fd << '\n';
 }
 
 bool Server::sendHttpResponse(const std::string& rawRequest, int client_fd){

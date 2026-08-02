@@ -1,7 +1,10 @@
 #pragma once
 
+#include <atomic>
 #include <string>
 #include "thread_pool.h"
+
+extern std::atomic<bool> g_stop_server;
 
 class Server{
 public:
