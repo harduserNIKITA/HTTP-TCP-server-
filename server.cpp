@@ -92,7 +92,7 @@ void Server::reactivateSocket(int client_fd){
 }
 
 void Server::run(){
-    epoll_event events[MAX_EVENTS] = {0};
+    epoll_event events[MAX_EVENTS] = {};
     while (!g_stop_server){
         int nefd = epoll_wait(epfd, events, MAX_EVENTS, 1000);
         if (nefd <= 0){
@@ -100,7 +100,7 @@ void Server::run(){
             printLog("error in epoll_wait");
             break;
         }
-        for (size_t i = 0; i < nefd; i++){
+        for (int i = 0; i < nefd; i++){
             int current_fd = events[i].data.fd;
             if (current_fd == server_fd){
                 processNewConnections();

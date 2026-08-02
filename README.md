@@ -19,3 +19,13 @@ make
 ```
 ./server
 ```
+---
+## тестирование
+### Unit-Tests(GoogleTest)
+В файле CMakeLists.txt через FetchContent скачивается репозиторий GoogleTest v14.0
+tests/test_main.cpp тестирует модули parseHttpRequest и ThreadPool с использованием библиотеки <gtest/gtest.h>
+Запуск
+```
+./run_tests
+```
+
