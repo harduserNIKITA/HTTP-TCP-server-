@@ -32,4 +32,6 @@ private:
     void reactivateSocket(int client_fd);
     void processNewConnections();
     void processNewData(int client_fd);
+
+    void closeClientSocket(int client_fd);
 };

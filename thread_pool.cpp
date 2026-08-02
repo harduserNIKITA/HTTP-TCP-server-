@@ -31,7 +31,7 @@ void ThreadPool::enqueue(std::function<void()> task){
     cv.notify_one();
 }
 
-ThreadPool::~ThreadPool(){
+void ThreadPool::stopPool(){
     {
         std::unique_lock<std::mutex> lock(queueMutex);
         stop = true;
@@ -42,4 +42,8 @@ ThreadPool::~ThreadPool(){
             workers[i].join();
         }
     }
+}
+
+ThreadPool::~ThreadPool(){
+    stopPool();
 }

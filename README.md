@@ -22,10 +22,20 @@ make
 ---
 ## тестирование
 ### Unit-Tests(GoogleTest)
-В файле CMakeLists.txt через FetchContent скачивается репозиторий GoogleTest v14.0
-tests/test_main.cpp тестирует модули parseHttpRequest и ThreadPool с использованием библиотеки <gtest/gtest.h>
+В файле CMakeLists.txt через FetchContent скачивается репозиторий GoogleTest v14.0<br>tests/test_main.cpp тестирует модули parseHttpRequest и ThreadPool с использованием библиотеки <gtest/gtest.h>
 Запуск
 ```
 ./run_tests
+```
+### Sanitizers
+При проведении тестирования можно пользоваться Dynamic Analysis при помощи санитайзеров<br>
+Чтобы включить данную опцию при анализе CMakeLists.txt надо передать следующие параметры<br>
+Для использования Address Sanitizer (ASan):
+```
+cmake -DSANITIZER=address ..
+```
+Для использования Thread Sanitizer (TSan):
+```
+cmake -DSANITIZER=thread ..
 ```
 

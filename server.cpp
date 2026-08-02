@@ -17,9 +17,15 @@ Server::Server(int port, int cntThreads) : port(port), pool(cntThreads) {
 }
 
 Server::~Server(){
+    pool.stopPool();
     if (epfd != -1) close(epfd);
     if (server_fd != -1) close(server_fd);
     std::cout << ".....[!][!] server shut down [!][!].....\n";
+}
+
+void Server::closeClientSocket(int client_fd){
+    epoll_ctl(epfd, EPOLL_CTL_DEL, client_fd, nullptr);
+    close(client_fd);
 }
 
 bool Server::setNonblocking(int fd){
@@ -87,7 +93,7 @@ void Server::reactivateSocket(int client_fd){
     client_ev.data.fd = client_fd;
     if (epoll_ctl(epfd, EPOLL_CTL_MOD, client_fd, &client_ev) < 0){
         printLog("error reactivateSocket");
-        close(client_fd);
+        closeClientSocket(client_fd);
     }
 }
 
@@ -136,7 +142,7 @@ void Server::processNewConnections(){
         client_ev.data.fd = client_fd;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0){
             printLog("error in add client_fd to EPOLL");
-            close(client_fd);
+            closeClientSocket(client_fd);
         }
         else {
             std::cout << "[+] new connection\n";
@@ -170,7 +176,7 @@ void Server::processNewData(int client_fd){
     }
 
     if (client_closed){
-        close(client_fd);
+        closeClientSocket(client_fd);
         return;
     }
 
@@ -182,7 +188,7 @@ void Server::processNewData(int client_fd){
 
     bool shouldClose = sendHttpResponse(fullRawRequest, client_fd);
     if (shouldClose){
-        close(client_fd);
+        closeClientSocket(client_fd);
         std::cout << "[-] response and close client_fd: " << client_fd << '\n';
     }
     else {

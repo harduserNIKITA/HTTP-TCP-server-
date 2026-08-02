@@ -5,6 +5,17 @@ project(httpServer CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(СMAKE_CXX_STANDARD_REQUIRED ON)
 
+set (SANITIZER "none" CACHE STRING "has 3 type: none, address (ASan), thread (TSan)")
+if(SANITIZER STREQUAL "address")
+    message(STATUS "Build with AddressSanitizer (ASan) & LeakSanitizer")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+elseif(SANITIZER STREQUAL "thread")
+    message(STATUS "Build with ThreadSanitizer (TSan)")
+    add_compile_options(-fsanitize=thread)
+    add_link_options(-fsanitize=thread)
+endif()
+
 add_compile_options(-Wall -Wextra -g)
 
 find_package(Threads REQUIRED)
