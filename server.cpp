@@ -144,9 +144,9 @@ void Server::processNewConnections(){
             printLog("error in add client_fd to EPOLL");
             closeClientSocket(client_fd);
         }
-        else {
-            std::cout << "[+] new connection\n";
-        }
+        //else {
+            //std::cout << "[+] new connection\n";
+        //}
     }
 }
 
@@ -160,7 +160,7 @@ void Server::processNewData(int client_fd){
             fullRawRequest.append(buffer, read_bytes);
         }
         else if (read_bytes == 0){
-            std::cout << "[-] client disconnecting before sending data, client_fd: " << client_fd << '\n';
+            //std::cout << "[-] client disconnecting before sending data, client_fd: " << client_fd << '\n';
             client_closed = true;
             break;
         }
@@ -182,25 +182,25 @@ void Server::processNewData(int client_fd){
 
     if (fullRawRequest.empty()){
         reactivateSocket(client_fd);
-        std::cout << "[!] reactivate client_fd: " << client_fd << '\n';
+        //std::cout << "[!] reactivate client_fd: " << client_fd << '\n';
         return;
     }
 
     bool shouldClose = sendHttpResponse(fullRawRequest, client_fd);
     if (shouldClose){
         closeClientSocket(client_fd);
-        std::cout << "[-] response and close client_fd: " << client_fd << '\n';
+        //std::cout << "[-] response and close client_fd: " << client_fd << '\n';
     }
     else {
         reactivateSocket(client_fd);
-        std::cout << "[!] response and reactivate client_fd: " << client_fd << '\n';
+        //std::cout << "[!] response and reactivate client_fd: " << client_fd << '\n';
     }
 }
 
 bool Server::sendHttpResponse(const std::string& rawRequest, int client_fd){
     HttpRequest req = parseHttpRequest(rawRequest);
 
-    std::cout << "method = " << req.method << " | path = " << req.path << " | version = " << req.version << "\n";
+    //std::cout << "method = " << req.method << " | path = " << req.path << " | version = " << req.version << "\n";
 
     bool shouldClose = false;
     auto it = req.headers.find("Connection");

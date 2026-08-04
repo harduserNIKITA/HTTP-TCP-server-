@@ -11,6 +11,11 @@ mkdir build && cd build
 ```
 cmake .. 
 ```
+(Если до этого сборка была осуществлена с помощью -DSANITIZER=thread или -DSANITIZER=address<br>
+то надо явно задать тип none, чтобы сборка была в режиме Release и без TSan/Asan)
+```
+cmake -DSANITIZER=none ..
+```
 3. Собираем проект
 ```
 make
@@ -38,10 +43,9 @@ cmake -DSANITIZER=address ..
 ```
 cmake -DSANITIZER=thread ..
 ```
-
-
-
----
+### Стресс-тестирование
+Нагрузочные тесты проведены с использованием утилиты wrk, которая запускалась со 100 открытыми соединения, 400 и 1000
+```
+wrk -t$(nproc) -c100 -d10s http://localhost:8080
+```
 <img width="757" height="568" alt="нагрукза_сервер_без_cout" src="https://github.com/user-attachments/assets/d89fd42e-f4f4-48d8-8e77-53e81556b35a" />
-
-
