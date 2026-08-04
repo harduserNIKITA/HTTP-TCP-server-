@@ -33,8 +33,9 @@ make
 ---
 ## Тестирование
 ### Unit-Tests(GoogleTest)
-В файле CMakeLists.txt через FetchContent скачивается репозиторий GoogleTest v14.0<br>tests/test_main.cpp тестирует модули parseHttpRequest и ThreadPool с использованием библиотеки <gtest/gtest.h>
-Запуск
+- В файле CMakeLists.txt через FetchContent скачивается репозиторий GoogleTest v14.0
+- tests/test_main.cpp тестирует модули parseHttpRequest и ThreadPool с использованием библиотеки <gtest/gtest.h>
+<br>Запуск
 ```
 ./run_tests
 ```
