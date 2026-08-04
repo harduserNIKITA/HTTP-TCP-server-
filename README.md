@@ -39,3 +39,9 @@ cmake -DSANITIZER=address ..
 cmake -DSANITIZER=thread ..
 ```
 
+
+
+---
+<img width="757" height="568" alt="нагрукза_сервер_без_cout" src="https://github.com/user-attachments/assets/d89fd42e-f4f4-48d8-8e77-53e81556b35a" />
+
+
